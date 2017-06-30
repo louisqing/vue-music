@@ -23,6 +23,7 @@
         default: []
       }
     },
+    //这是注册组件
     components:{
         Scroll
     }
