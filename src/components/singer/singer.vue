@@ -36,6 +36,7 @@
             items: []
           }
         }
+        //循环
         list.forEach((item, index) => {
           if (index < HOT_SINGER_LEN) {
             map.hot.items.push(new Singer({
