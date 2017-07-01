@@ -1,7 +1,13 @@
 <template>
-  <scroll class="listview" :data="data">
+  <scroll class="listview"
+          :data="data"
+          ref="listview"
+          :listenScroll="listenScroll"
+          :probeType="probeType"
+          @scroll="scroll"
+  >
     <ul>
-      <li v-for="group in data" class="list-group">
+      <li v-for="group in data" class="list-group" ref="listGroup">
         <h2 class="list-group-title">{{group.title}}</h2>
         <ul>
           <li v-for="item in group.items" class="list-group-item">
@@ -11,21 +17,121 @@
         </ul>
       </li>
     </ul>
+    <div class="list-shortcut" @touchstart="onShortcutTouchStart" @touchmove.stop.prevent="onShortcutTouchMove">
+      <ul>
+        <li v-for="(item,index) in shortcutList" class="item" :data-index="index"
+            :class="{'current':currentIndex===index}">
+          {{item}}
+        </li>
+      </ul>
+    </div>
   </scroll>
 </template>
 
 <script type="text/ecmascript-6">
   import Scroll from 'base/scroll/scroll'
+  import {getData} from 'common/js/dom'
+  // 锚点的高度
+  const ANXHOR_HEIGHI = 18
   export default{
+    created(){
+      this.touch = {},
+        this.listenScroll = true,
+        this.listHeight = [],
+        this.probeType = 3
+    },
+    data(){
+      return {
+        scrollY: -1,
+        currentIndex: 0
+      }
+    },
     props: {
       data: {
         type: Array,
         default: []
       }
     },
-    //这是注册组件
-    components:{
-        Scroll
+    computed: {
+      shortcutList(){
+        return this.data.map((group) => {
+          return group.title.substr(0, 1)
+        })
+      }
+    },
+    methods: {
+      onShortcutTouchStart(e){
+        let anchorIndex = getData(e.target, 'index')
+        //touch当前的位置 e.touches  当前手指的第一个
+        let firstTouch = e.touches[0]
+        // 为什么移动的数据不保持到data中或者props中而是放在created  data和props的数据改变都会被vue检测和更新以上数据  而我们只是做js中的数据通信
+        this.touch.y1 = firstTouch.pageY
+        //当前index的索值
+        this.touch.anchorIndex = anchorIndex
+        this._ScrollTop(anchorIndex)
+      },
+      onShortcutTouchMove(e){
+        let firstToch = e.touches[0]
+        this.touch.y2 = firstToch.pageY
+        let delta = (this.touch.y2 - this.touch.y1) / ANXHOR_HEIGHI | 0
+        let anchorIndex = parseInt(this.touch.anchorIndex + delta)
+        this._ScrollTop(anchorIndex)
+      },
+      scroll(pos){
+        this.scrollY = pos.y
+      },
+      //公共的方法
+      _ScrollTop(index){
+        if (!index && index !== 0) {
+          return
+        }
+        if (index < 0) {
+          index = 0
+        } else if (index > this.listHeight - 2) {
+          index = this.listHeight - 2
+        }
+        this.scrollY = -this.listHeight[index]
+        this.$refs.listview.scrollToElement(this.$refs.listGroup[index], 0)
+      },
+      _calculateHeight() {
+        this.listHeight = []
+        const list = this.$refs.listGroup
+        let height = 0
+        this.listHeight.push(height)
+        for (let i = 0; i < list.length; i++) {
+          let item = list[i]
+          height += item.clientHeight
+          this.listHeight.push(height)
+        }
+      }
+    },
+    watch: {
+      data(){
+        setTimeout(() => {
+          this._calculateHeight()
+        }, 20)
+      },
+      scrollY(newY){
+        const listHeight = this.listHeight
+        //当滚动到顶部
+        if (newY > 0) {
+          this.currentIndex = 0
+        }
+        //滚动到中间
+        for (let i = 0; i < listHeight.length - 1; i++) {
+          let height1 = listHeight[i]
+          let height2 = listHeight[i + 1]
+          if (-newY >= height1 && -newY < height2) {
+            this.currentIndex = i
+            return
+          }
+        }
+        //滚动到底部且是-newy大于最后一个元素的上限
+        this.currentIndex = listHeight.length - 2
+      }
+    },
+    components: {
+      Scroll
     }
   }
 </script>

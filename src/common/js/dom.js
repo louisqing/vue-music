@@ -15,3 +15,13 @@ export function addClass(el, className) {
   el.className = newClass.join('')
 }
 
+/*歌手页面的点击右边跳转到左边对应的标题分组dom操作*/
+export function getData(el, name, val) {
+  const prefix = 'data-'
+  name = prefix +name
+  if (val) {
+    return el.setAttribute(prefix + name, val)
+  }else{
+    return el.getAttribute(name)
+  }
+}
